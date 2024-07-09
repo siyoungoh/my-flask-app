@@ -1,0 +1,34 @@
+image: docker:latest
+
+services:
+  - docker:dind
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_REGISTRY: docker.io
+  DOCKER_IMAGE: ${DOCKER_USERNAME}/my-flask-app
+
+before_script:
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+stages:
+  - build
+  - push
+
+build:
+  stage: build
+  script:
+    - docker build -t $DOCKER_IMAGE:latest .
+    - docker tag $DOCKER_IMAGE:latest $DOCKER_IMAGE:test
+    - docker save -o my-flask-app.tar $DOCKER_IMAGE:latest
+  artifacts:
+    paths:
+      - my-flask-app.tar
+
+push:
+  stage: push
+  dependencies:
+    - build
+  script:
+    - docker load -i my-flask-app.tar
+    - docker push $DOCKER_IMAGE:latest
